@@ -10,6 +10,7 @@ def feature_faturamento(df):
         faturamento = lambda x: x['quantidade_vendida'] * x['preco_unitario']
     )
 
+
 mapa_mes = {
     1: 'Jan', 2: 'Fev', 3: 'Mar',
     4: 'Abr', 5: 'Mai', 6: 'Jun',
@@ -28,6 +29,7 @@ mapa_semana = {
 def feature_tempo(df):
     return df.assign(
         dia    = lambda x: x['data'].dt.day,
+        mes_num= lambda x: x['data'].dt.month,
         mes    = lambda x: x['data'].dt.month.map(mapa_mes),
         ano    = lambda x: x['data'].dt.year,
         semana = lambda x: x['data'].dt.day_name().map(mapa_semana)

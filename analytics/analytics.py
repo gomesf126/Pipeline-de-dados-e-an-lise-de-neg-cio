@@ -1,98 +1,107 @@
-import pandas as pd
-from extract.extract import (extrair_arquivo,transformar_tabela)
 
-arquivo = extrair_arquivo()
-tabela = transformar_tabela(arquivo)
-df = pd.DataFrame(tabela)
+def calc_metric(df):
 
 
+    faturamento_produto = (df
+               .groupby('produto', as_index=False)
+               .agg(faturamento = ('faturamento','sum'))
+               .sort_values(by='faturamento', ascending=False)
+               .head(6) )
 
-'''1. Faturamento (ESSENCIAL)
-Função:
-faturamento
-'''
+    faturamento_cliente =(df
+               .groupby('nome_completo', as_index=False)
+               .agg(faturamento = ('faturamento','sum'))
+               .sort_values(by='faturamento', ascending=False)
+               .head(6)
+               .round(2)
+    )
+    faturamento_loja=(df
+              .groupby('loja', as_index=False)
+              .agg(faturamento = ('faturamento','sum'))
+              .sort_values(by='faturamento', ascending=False)
+              .head(6)
+              .round(2))
 
-'''2. Produto mais vendido
-top produtos
-ranking
-Função:
-top_produtos'''
+    base =(df.groupby('produto', as_index=False)
+                 .agg(faturamento = ('faturamento','sum'),
+                      quantidade = ('quantidade_vendida','sum'))
+                 )
 
-'''3. Performance por loja
-faturamento
-Função:
-faturamento_por_loja'''
+    produtos_alta_qtd_baixo_fat = base.sort_values(by='quantidade', ascending=False).head(6)
+    produtos_baixa_qtd_alto_fat  = base.sort_values(by='faturamento', ascending=False).head(6)
 
-'''4. Análise temporal
-INSIGHTS:
-vendas por mês
-vendas por dia
-sazonalidade
+    ranking_produtos = (df
+                       .groupby('produto', as_index=False)
+                       .agg(faturamento = ('faturamento','sum'))
+                       .assign(ranking = lambda x: x['faturamento'].rank(method='dense', ascending=False).astype(int) )
+                       .sort_values(by='ranking' )
+    )
+    ranking_produto_loja = (df.groupby('loja', as_index=False)
+                        .agg(faturamento = ('faturamento','sum'),
+                             quantidade = ('nome_completo','nunique'))
+                        .assign(ticket_medio = lambda x: x['faturamento'] / x['quantidade'],
+                                ranking_loja = lambda x: x['faturamento'].rank(method='dense', ascending=False).astype(int) )
+                        .sort_values(by='faturamento', ascending=False)
+                        .head(6))
 
-Função:
-analise_temporal
-'''
 
-'''5. Clientes (simples)
+    produto_analise = 'Televisão'
+    mes_analise = [1,2,3,4,5,6,7,8,9,10,11,12]
+    filtro = (
+        (df['mes_num'].isin(mes_analise)) &
+        (df['produto'] == produto_analise)
+    )
 
-Você tem:
-Primeiro Nome
-Sobrenome
+    vendas_mes_tv =(
+                     df.loc[filtro]
+                    .groupby(['produto','mes','mes_num'], as_index=False)
+                    .agg(faturamento = ('faturamento','sum'))
+                    .sort_values(by='mes_num'))
 
-'''
+    crescimento_vendas_mes_tv = (
+                     df[filtro]
+                    .groupby(['mes', 'mes_num'], as_index=False)
+                    .agg(faturamento=('faturamento', 'sum'))
+                    .sort_values(by='mes_num', kind='stable')
+                    .assign(crescimento = lambda x: x['faturamento'].pct_change().round(2))
+    )
 
-'''6. Ticket médio (muito importante)
-Função: calcular_ticket_medio
-'''
 
-'''7. Quantidade média por compra
-Clientes compram muito ou pouco?
-Função: top_produtos'''
 
-'''8. Clientes mais valiosos (top clientes)
-quem compra mais
-quem gera mais faturamento
-Função: top_clientes'''
 
-'''9. Produtos com baixa performance
 
-produtos com baixo faturamento
-produtos com baixa quantidade
+    cliente_analise= ['Guilherme Lima','Victor Lira']
+    mes_cliente = [1,2,3,4,5,6,7,8,9,10,11,12]
+    filtro_cliente = (
+        (df['nome_completo'].isin(cliente_analise)) &
+        (df['mes_num'].isin(mes_cliente))
 
-Função:
-produtos_baixa_performance'''
+    )
 
-'''10. Crescimento ao longo do tempo
+    crescimento_faturamento_cliente_vip = (df[filtro_cliente]
+                   .groupby(['nome_completo','mes_num'], as_index=False)
+                   .agg(faturamento = ('faturamento','sum'),
+                        quantidade_comprada = ('quantidade_vendida','sum'))
+                   .sort_values(by=['nome_completo','mes_num'])
+                   .assign(crescimento = lambda x: x.groupby('nome_completo')['faturamento'].pct_change().round(2))
+                   )
 
-vendas por mês
-tendência (subindo ou caindo)
 
-Função:
-analise_crescimento'''
 
-'''11. Dia da semana mais forte
-Função: dia_forte'''
+    return (
+        {
+         'faturamento_produto'               : faturamento_produto,
+         'faturamento_cliente'               : faturamento_cliente,
+         'faturamento_loja'                  : faturamento_loja,
+         'produtos_alta_qtd_baixo_fat'       : produtos_alta_qtd_baixo_fat,
+         'produtos_baixa_qtd_alto_fat'       : produtos_baixa_qtd_alto_fat,
+         'ranking_produtos'                  : ranking_produtos,
+         'ranking_produto_loja'              : ranking_produto_loja,
+         'vendas_mes_tv'                     : vendas_mes_tv,
+         'crescimento_vendas_mes_tv'         : crescimento_vendas_mes_tv,
+        'crescimento_faturamento_cliente_vip': crescimento_faturamento_cliente_vip
+         }
+    )
 
-'''11. Distribuição de preço
 
-produtos são baratos ou caros?
-
-média de preço
-mediana
-desvio padrão
-
-Função:
-analise_preco'''
-
-'''12. Anomalias (nível mais avançado)
-
-preços muito altos ou muito baixos
-quantidades estranhas
-
-Função:
-detectar_outliers'''
-
-'''13. Margem simulada (nível negócio)
-
-lucro = faturamento * 0.3'''
 
